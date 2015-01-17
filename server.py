@@ -27,21 +27,53 @@ class IndexHandler(tornado.web.RequestHandler):
 
     	ow_soup = BeautifulSoup(ow_raw)
 
-    	ow_dict = {
-    		'country_name': str(ow_soup.title.get_text().replace(" | Operation World", "")),
-    		'url': url % country,
-    		'geography': {},
-    		'people': {},
-    		'religion': {},
-    		'prayer_answers': {},
-    		'prayer_challenges': {},
-    		'copyright': "All content copyright Operation World. For more information visit the OW website (operationworld.org). Data retrieved: %s." % date.today()
+    	text = ow_soup.find('div', {'id':"cou_text"})
+        tags = text.find_all(['h3', 'p'])
 
-    	}
+        section = None
+        ow_dict = {
+            'country_name': str(ow_soup.title.get_text().replace(" | Operation World", "")),
+            'url': url % country,
+            'geography': [],
+            'people': [],
+            'religion': [],
+            'prayer_answers': [],
+            'prayer_challenges': [],
+            'copyright': "All content copyright Operation World. For more information visit the OW website (operationworld.org). Data retrieved: %s." % date.today()
+        }
+
+        for t in tags:
+
+            if t.name == 'h3':
+                section = self.id_section(t.text)
+
+            if t.name == 'p' and section is not None:
+                ow_dict[section].append(t.text)
+
+
 
     	ow_json = json.dumps(ow_dict)
     	self.add_header('Content-Type', 'application/json')
     	self.write(ow_json)
+
+    def id_section(self, section_name):
+
+        if section_name == 'Geography':
+            return 'geography'
+
+        if section_name == 'Peoples':
+            return 'people'
+
+        if section_name == 'Religion':
+            return 'religion'
+
+        if section_name == 'Answers to Prayer':
+            return 'prayer_challenges'
+
+        if section_name == 'Challenges for Prayer':
+            return 'prayer_challenges'
+
+        return None
 
 app = tornado.web.Application([
     (r'/', IndexHandler),
