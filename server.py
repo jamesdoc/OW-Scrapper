@@ -34,9 +34,9 @@ class IndexHandler(tornado.web.RequestHandler):
         ow_dict = {
             'country_name': str(ow_soup.title.get_text().replace(" | Operation World", "")),
             'url': url % country,
-            'geography': [],
-            'people': [],
-            'religion': [],
+            'geography': {'other':[]},
+            'people': {'other':[]},
+            'religion': {'other':[]},
             'prayer_answers': [],
             'prayer_challenges': [],
             'copyright': "All content copyright Operation World. For more information visit the OW website (operationworld.org). Data retrieved: %s." % date.today()
@@ -48,7 +48,14 @@ class IndexHandler(tornado.web.RequestHandler):
                 section = self.id_section(t.text)
 
             if t.name == 'p' and section is not None:
-                ow_dict[section].append(t.text)
+                if section not in ['geography', 'people', 'religion']:
+                    ow_dict[section].append(t.text.strip())
+                else:
+                    text = self.parse_paragraph(t.text)
+                    if type(text) is list:
+                        ow_dict[section][text[0]] = text[1]
+                    else:
+                        ow_dict[section]['other'].append(text)
 
 
 
@@ -74,6 +81,17 @@ class IndexHandler(tornado.web.RequestHandler):
             return 'prayer_challenges'
 
         return None
+
+    def parse_paragraph(self, paragraph):
+
+        if ':' in paragraph:
+            para_split = paragraph.split(':', 1)
+            para_split[1] = para_split[1].strip()
+            return para_split
+        else:
+            return paragraph
+
+        
 
 app = tornado.web.Application([
     (r'/', IndexHandler),
